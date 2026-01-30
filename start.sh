@@ -1,16 +1,19 @@
 #!/bin/sh
 
-# Start the Tailscale daemon in the background
-# We use --tun=userspace because Render's environment doesn't allow kernel TUN devices
+# 1. Start Tailscale daemon in userspace mode
 tailscaled --tun=userspace-networking --socks5-server=localhost:1055 &
 
-# Wait a moment for tailscaled to initialize
-sleep 2
+# 2. Wait for daemon to be ready
+sleep 5
 
-# Authenticate Tailscale
-# The --authkey will be provided via Render Environment Variables
-tailscale up --authkey=${TAILSCALE_AUTHKEY} --hostname=koha-web-admin
+# 3. Authenticate with the CORRECT Auth Key
+if [ -n "$TAILSCALE_AUTHKEY" ]; then
+    echo "Attempting to bring Tailscale up..."
+    tailscale up --authkey=${TAILSCALE_AUTHKEY} --hostname=koha-web-admin
+else
+    echo "Error: TAILSCALE_AUTHKEY is not set. Skipping Tailscale login."
+fi
 
-# Start your Flask app using Gunicorn
-# Ensure 'app:app' matches your Flask entry point (filename:variable)
-exec gunicorn -b 0.0.0.0:10000 app:app
+# 4. Start Flask with Gunicorn (using the -m module flag)
+echo "Starting Flask application..."
+exec python -m gunicorn -b 0.0.0.0:10000 app:app
