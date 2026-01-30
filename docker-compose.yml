@@ -1,0 +1,13 @@
+services:
+  koha-admin:
+    build: .
+    container_name: koha-web-admin
+    restart: always
+    privileged: true
+    volumes:
+      - ./ts_state:/var/lib/tailscale
+    environment:
+      - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY}  # Pulls from .env
+      - PORT=${PORT}
+    ports:
+      - "${PORT}:${PORT}"
