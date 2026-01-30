@@ -891,81 +891,56 @@ connect = {connect_ip}:8053
         
         self.log("✅ Stunnel4 completely removed from the system.", "SUCCESS")
 
-    def nuke_koha(self):
-        self.log("☢️ INITIATING KOHA SELF-DESTRUCT SEQUENCE...", "WARN")
-        
-        try:
-            # 1. List Instances to Clean Up Databases First
-            self.log("🔍 Finding instances...", "INFO")
-            stdin, stdout, stderr = self.client.exec_command("koha-list")
-            instances = stdout.read().decode().strip().split()
-            
-            if instances:
-                self.log(f"Found instances: {', '.join(instances)}", "INFO")
-            else:
-                self.log("⚠️ No instances found via koha-list.", "WARN")
-
-            # 2. Stop Service
-            self.execute("systemctl stop koha-common")
-            self.execute("systemctl disable koha-common")
-
-            # 3. Manual Cleanup of Instances (The "Thorough" Method)
-            for inst in instances:
-                self.log(f"🚨 cleaning up: {inst}...", "INFO")
-                # Drop DB and Users
-                sql = f"DROP DATABASE IF EXISTS koha_{inst}; DROP USER IF EXISTS 'koha_{inst}'@'localhost'; FLUSH PRIVILEGES;"
-                self.execute(f"mysql -u root -e \"{sql}\"")
-                
-                # Del System User
-                self.execute(f"deluser --remove-home {inst}-koha")
-                
-                # Remove Apache Configs
-                self.execute(f"a2dissite {inst}")
-                self.execute(f"rm -f /etc/apache2/sites-available/{inst}.conf")
-                self.execute(f"rm -f /etc/apache2/sites-enabled/{inst}.conf")
-
-            # 4. Purge Package
-            self.log("🧹 Purging Koha packages...", "INFO")
-            self.execute("apt purge --autoremove koha-common -y")
-
-            # 5. Remove Directories
-            self.log("🗑️ Removing leftover directories...", "INFO")
-            dirs = [
-                "/etc/koha", "/var/lib/koha", "/var/spool/koha", 
-                "/var/lock/koha", "/var/cache/koha", "/var/log/koha", 
-                "/var/run/koha", "/usr/share/koha", 
-                "/usr/share/keyrings/koha-keyring.gpg", 
-                "/etc/apt/sources.list.d/koha.list"
-            ]
-            self.execute(f"rm -rf {' '.join(dirs)}")
-
-            # 6. Reload Apache
-            self.execute("systemctl reload apache2")
-
-            self.log("✅ Koha removal completed successfully. System is clean.", "SUCCESS")
-
-        except Exception as e:
-            self.log(f"❌ Nuke Failed: {e}", "ERROR")
-
     def nuke_tailscale(self):
-        self.log("☢️ NUKING TAILSCALE...", "WARN")
+        self.log("☢️ NUKING TAILSCALE (SCORCHED EARTH MODE)...", "WARN")
         
-        # 1. Create a robust cleanup script
-        # CRITICAL: 'tailscale logout' MUST run before 'systemctl stop'
+        # 1. Create a "Scorched Earth" cleanup script
+        # explicitly targeting the leftover files you found
         script_content = """#!/bin/bash
 sleep 5
-echo "Logging out..."
-tailscale logout
-echo "Stopping services..."
-systemctl stop tailscaled
-systemctl disable tailscaled
-echo "Purging package..."
-apt-get purge tailscale -y
-echo "Cleaning directories..."
-rm -rf /var/lib/tailscale /var/cache/tailscale /var/log/tailscale /run/tailscale
-rm -rf /etc/default/tailscaled /usr/bin/tailscale
-rm -rf /etc/apt/sources.list.d/tailscale.list
+
+echo "1. Stopping Services..."
+tailscale logout || true
+systemctl stop tailscaled || true
+systemctl disable tailscaled || true
+pkill -9 tailscaled || true
+
+echo "2. Purging Packages..."
+apt-get purge tailscale tailscale-archive-keyring -y || true
+# Force remove from dpkg database if apt missed it
+dpkg --purge --force-all tailscale || true
+dpkg --purge --force-all tailscale-archive-keyring || true
+
+echo "3. removing Binaries & Configs..."
+rm -f /usr/bin/tailscale
+rm -f /usr/sbin/tailscaled
+rm -f /etc/default/tailscaled
+rm -f /etc/apt/sources.list.d/tailscale.list
+rm -f /usr/share/keyrings/tailscale-archive-keyring.gpg
+
+echo "4. Cleaning Systemd Units..."
+rm -f /etc/systemd/system/multi-user.target.wants/tailscaled.service
+rm -f /usr/lib/systemd/system/tailscaled.service
+rm -f /var/lib/systemd/deb-systemd-helper-enabled/tailscaled*
+rm -rf /var/lib/systemd/deb-systemd-helper-enabled/multi-user.target.wants/tailscaled*
+
+echo "5. Wiping Data Directories..."
+rm -rf /var/lib/tailscale
+rm -rf /var/cache/tailscale
+rm -rf /var/log/tailscale
+rm -rf /run/tailscale
 rm -rf /home/*/.local/share/tailscale
+
+echo "6. Cleaning Apt Cache & Lists..."
+rm -f /var/cache/apt/archives/tailscale*
+rm -f /var/lib/apt/lists/pkgs.tailscale.com*
+
+echo "7. Cleaning Dpkg Metadata..."
+rm -f /var/lib/dpkg/info/tailscale*
+
+echo "8. Reloading Daemon..."
+systemctl daemon-reload
+echo "DONE."
 """
         
         try:
@@ -973,18 +948,19 @@ rm -rf /home/*/.local/share/tailscale
             self.execute(f"echo '{script_content}' > /tmp/nuke_ts.sh")
             self.execute("chmod +x /tmp/nuke_ts.sh")
             
-            self.log("💣 Script uploaded. Triggering detonation...", "WARN")
+            self.log("💣 Cleanup script uploaded. Detonating...", "WARN")
             
             # 3. Execute blindly in background
+            # We use nohup so it survives the connection drop
             cmd = "nohup bash /tmp/nuke_ts.sh > /dev/null 2>&1 &"
             
-            # Send command blindly (connection will drop)
+            # Send command blindly
             full_cmd = f"sudo -S -p '' bash -c \"{cmd}\""
             stdin, stdout, stderr = self.client.exec_command(full_cmd)
             stdin.write(f"{self.password}\n")
             stdin.flush()
             
-            self.log("👋 Logout & Nuke sent. Connection will close in ~5 seconds.", "SUCCESS")
+            self.log("👋 Total Nuke sent. Connection will close in ~5 seconds.", "SUCCESS")
             
         except Exception as e:
             self.log(f"Nuke Failed: {e}", "ERROR")
