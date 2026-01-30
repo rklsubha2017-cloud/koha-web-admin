@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 from ssh_core import SSHManager
@@ -6,7 +9,7 @@ import os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'koha_cyber_secret'
 app.config['UPLOAD_FOLDER'] = '/tmp'
-socketio = SocketIO(app, async_mode='eventlet')
+socketio = SocketIO(app, async_mode='eventlet', ping_timeout=300, ping_interval=25)
 
 # Singleton SSH manager
 ssh = SSHManager(socketio.emit)

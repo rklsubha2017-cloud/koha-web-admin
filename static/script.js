@@ -59,3 +59,39 @@ socket.on('deep_stats_result', (d) => {
     document.getElementById('link_staff').innerText = `http://${hostIP}:${d.staff_port}`;
     document.getElementById('link_opac').innerText = `http://${hostIP}:${d.opac_port}`;
 });
+
+// --- RESIZER LOGIC ---
+const resizer = document.getElementById('resizer');
+const root = document.documentElement;
+
+resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    resizer.classList.add('resizing');
+});
+
+function handleMouseMove(e) {
+    const newHeight = window.innerHeight - e.clientY;
+    if (newHeight > 50 && newHeight < (window.innerHeight * 0.8)) {
+        root.style.setProperty('--console-height', `${newHeight}px`);
+    }
+}
+
+function handleMouseUp() {
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+    resizer.classList.remove('resizing');
+}
+
+// --- NEW: THEME SWITCHER ---
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+
+// Load Saved Theme
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark-mode');
+}

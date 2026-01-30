@@ -174,12 +174,33 @@ class SSHManager:
 
         # 3. PORTS (Working Fine)
         try:
-            _, out, _ = self.client.exec_command("cat /etc/koha/koha-sites.conf")
-            conf = out.read().decode()
-            for line in conf.split('\n'):
-                if "OPACPORT=" in line: data['opac_port'] = line.split("=")[1].replace('"','').replace("'", "").strip()
-                if "INTRAPORT=" in line: data['staff_port'] = line.split("=")[1].replace('"','').replace("'", "").strip()
-        except: pass
+            # 1. Use sudo to ensure we can actually read the file
+            cmd = "sudo -S -p '' cat /etc/koha/koha-sites.conf"
+            stdin, stdout, stderr = self.client.exec_command(cmd)
+            
+            # 2. Send password for sudo
+            stdin.write(f"{self.password}\n")
+            stdin.flush()
+            
+            # 3. Read Output
+            backup_conf = stdout.read().decode().strip()
+            
+            # 4. Parse line by line
+            if backup_conf:
+                for line in backup_conf.split('\n'):
+                    line = line.strip()
+                    # We check startswith to avoid matching comments or partial words
+                    if line.startswith("OPACPORT="):
+                        data['opac_port'] = line.split("=")[1].strip('"\'')
+                    if line.startswith("INTRAPORT="):
+                        data['staff_port'] = line.split("=")[1].strip('"\'')
+            else:
+                # Optional: Log if file was empty so you know why it failed
+                self.log("⚠️ koha-sites.conf was empty or unreadable.", "WARN")
+
+        except Exception as e:
+            # Log the actual error instead of silently passing
+            self.log(f"❌ Port Extraction Failed: {e}", "ERROR")
 
         # 4. STATS (Working Fine - Native koha-mysql)
         try:
@@ -387,11 +408,14 @@ class SSHManager:
             self.log("⏳ Importing SQL (This may take time)...", "INFO")
             # We use bash -c to ensure the '|| exit 1' logic works as intended
             run_step(f"bash -c 'mysql koha_{inst} < {remote_sql} || exit 1'", "Importing Data")
+
+            # 6. Memcached restart
+            run_step("systemctl restart memcached", "Restarting Memcached")
             
-            # 6. POST-IMPORT UPGRADES
+            # 7. POST-IMPORT UPGRADES
             run_step(f"koha-upgrade-schema {inst}", "Upgrading Schema")
             
-            # 7. ZEBRA & PLACK (Conditional)
+            # 8. ZEBRA & PLACK (Conditional)
             if rebuild_zebra:
                 run_step(f"koha-rebuild-zebra -v -f {inst}", "Rebuilding Zebra Index")
                 run_step(f"koha-plack --restart {inst}", "Restarting Plack")
