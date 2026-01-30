@@ -950,18 +950,41 @@ connect = {connect_ip}:8053
     def nuke_tailscale(self):
         self.log("☢️ NUKING TAILSCALE...", "WARN")
         
-        # We run this in a way that tries to finish even if connection dies
-        # Logout -> Stop -> Purge -> Delete Dirs
-        cmd = "nohup sh -c 'tailscale logout; systemctl stop tailscaled; apt-get purge tailscale -y; rm -rf /var/lib/tailscale /var/run/tailscale' &"
+        # 1. Create a robust cleanup script
+        # CRITICAL: 'tailscale logout' MUST run before 'systemctl stop'
+        script_content = """#!/bin/bash
+sleep 5
+echo "Logging out..."
+tailscale logout
+echo "Stopping services..."
+systemctl stop tailscaled
+systemctl disable tailscaled
+echo "Purging package..."
+apt-get purge tailscale -y
+echo "Cleaning directories..."
+rm -rf /var/lib/tailscale /var/cache/tailscale /var/log/tailscale /run/tailscale
+rm -rf /etc/default/tailscaled /usr/bin/tailscale
+rm -rf /etc/apt/sources.list.d/tailscale.list
+rm -rf /home/*/.local/share/tailscale
+"""
         
-        # We execute this blindly because the connection WILL drop
         try:
-            # We don't wait for output here
-            self.client.exec_command(f"sudo -S -p '' bash -c \"{cmd}\"")
-            # Send password blindly just in case sudo asks
-            time.sleep(1) 
-            # We can't really log success because we will be disconnected
-        except:
-            pass
+            # 2. Write the script to /tmp/nuke_ts.sh
+            self.execute(f"echo '{script_content}' > /tmp/nuke_ts.sh")
+            self.execute("chmod +x /tmp/nuke_ts.sh")
             
-        self.log("👋 Command sent. Connection will be lost shortly.", "WARN")
+            self.log("💣 Script uploaded. Triggering detonation...", "WARN")
+            
+            # 3. Execute blindly in background
+            cmd = "nohup bash /tmp/nuke_ts.sh > /dev/null 2>&1 &"
+            
+            # Send command blindly (connection will drop)
+            full_cmd = f"sudo -S -p '' bash -c \"{cmd}\""
+            stdin, stdout, stderr = self.client.exec_command(full_cmd)
+            stdin.write(f"{self.password}\n")
+            stdin.flush()
+            
+            self.log("👋 Logout & Nuke sent. Connection will close in ~5 seconds.", "SUCCESS")
+            
+        except Exception as e:
+            self.log(f"Nuke Failed: {e}", "ERROR")
