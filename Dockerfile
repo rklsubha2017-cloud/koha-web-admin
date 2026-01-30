@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install -y curl iptables sudo && \
 # 2. Install Tailscale
 RUN curl -fsSL https://tailscale.com/install.sh | sh
 
-# 3. Verify installation (This will fail the build if tailscaled is missing)
-RUN ls -l /usr/bin/tailscaled
+# 3. Start Tailscale and authenticate
+RUN tailscale up -authkey=${TAILSCALE_AUTHKEY} --accept-routes
+
 
 WORKDIR /app
 
