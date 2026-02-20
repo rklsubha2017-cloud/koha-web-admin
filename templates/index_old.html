@@ -4,51 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Koha Web Admin Suit</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.css" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/theme4.css">
 </head>
-<body class="light-mode"> 
-    <header>
+<body class="light-mode"> <header>
         <div class="brand">
             <i class="fa-solid fa-layer-group"></i> KOHA<span style="font-weight:400; opacity:0.7">OPS</span>
         </div>
-
-        <div id="header-stats">
-            <div class="h-stat" title="CPU Load Average">
-                <i class="fa-solid fa-microchip icon"></i>
-                <div class="h-bar-bg"><div id="bar-cpu" class="h-bar-fill" style="width: 0%; background: #f59e0b;"></div></div>
-                <span id="val-cpu" class="h-val">0.00</span>
-            </div>
-
-            <div class="h-stat" title="RAM Usage">
-                <i class="fa-solid fa-memory icon"></i>
-                <div class="h-bar-bg"><div id="bar-ram" class="h-bar-fill" style="width: 0%; background: #3b82f6;"></div></div>
-                <span id="val-ram" class="h-val">0 / 0</span>
-                <span id="lbl-ram" style="display:none"></span> </div>
-
-            <div class="h-stat" title="Disk Usage">
-                <i class="fa-solid fa-hard-drive icon"></i>
-                <div class="h-bar-bg"><div id="bar-disk" class="h-bar-fill" style="width: 0%; background: #10b981;"></div></div>
-                <span id="val-disk" class="h-val">0 / 0</span>
-                <span id="lbl-disk" style="display:none"></span> </div>
-        </div>
         
-        <div style="display:flex; align-items:center; gap: 15px;">
-            <label class="h-toggle" title="Toggle Live Monitoring">
-                <input type="checkbox" id="auto_refresh" checked onchange="toggleAutoRefresh()"> 
-                <i class="fa-solid fa-heart-pulse"></i>
-            </label>
-
+        <div style="display:flex; align-items:center;">
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
                 <i class="fa-solid fa-circle-half-stroke"></i>
             </button>
 
             <div class="conn-bar">
-                <input id="host" placeholder="Tailscale IP">
+                <input id="host" placeholder="Tailscale IP / Host">
                 <input id="user" value="koha" placeholder="User">
-                <button onclick="connectSSH()"><i class="fa-solid fa-plug"></i></button>
+                <input type="password" id="pass" placeholder="Sudo Password">
+                <button onclick="connectSSH()"><i class="fa-solid fa-plug"></i> Connect</button>
             </div>
         </div>
     </header>
@@ -63,8 +37,6 @@
             <button onclick="tab('net')"><i class="fa-solid fa-shield-halved"></i> Network</button>
             <button onclick="tab('sip')"><i class="fa-solid fa-share-nodes"></i> SIP2</button>
             <button onclick="tab('users')"><i class="fa-solid fa-users-gear"></i> Users</button>
-            <button onclick="tab('terminal')"><i class="fa-solid fa-terminal"></i> Terminal</button>
-            <button onclick="tab('files')"><i class="fa-solid fa-folder-open"></i> Files</button>
             <button class="danger" onclick="tab('danger')"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</button>
         </nav>
 
@@ -125,14 +97,6 @@
                             <div class="status-dot" id="dot-cron"></div>
                         </div>
                         <button class="btn-tiny" onclick="restartSvc('cron')">Restart</button>
-                    </div>
-
-                    <div class="card glass-panel service-card" id="card-sip2">
-                        <div class="svc-top">
-                            <div><i class="fa-solid fa-share-nodes"></i> SIP2 Server</div>
-                            <div class="status-dot" id="dot-sip2"></div>
-                        </div>
-                        <button class="btn-tiny" onclick="restartSvc('sip2')">Restart All</button>
                     </div>
                 </div>
 
@@ -395,60 +359,6 @@
                 </div>
             </div>
 
-            <div id="terminal" class="tab">
-                <div class="dash-header">
-                    <h2>Interactive System Terminal</h2>
-                    <div class="dash-controls">
-                        <button id="btn-term-connect" class="btn-tiny" onclick="initTerminal()">
-                            <i class="fa-solid fa-power-off"></i> Connect Shell
-                        </button>
-                        
-                        <button id="btn-term-disconnect" class="btn-tiny" style="display:none; color:var(--danger); border-color:var(--danger)" onclick="disconnectTerminal()">
-                            <i class="fa-solid fa-plug-circle-xmark"></i> Disconnect
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="card glass-panel" style="padding: 0; overflow: hidden; height: 600px; background: #0f172a;">
-                    <div id="xterm-container" style="height: 100%; width: 100%;"></div>
-                </div>
-            </div>
-
-            <div id="files" class="tab">
-                <div class="dash-header">
-                    <h2>File Manager</h2>
-                    <div class="dash-controls">
-                        <input type="file" id="fm_upload_input" style="display:none" onchange="uploadFMFile()">
-                        <button class="btn-tiny" onclick="document.getElementById('fm_upload_input').click()">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Here
-                        </button>
-                        <button class="btn-tiny" onclick="refreshFM()"><i class="fa-solid fa-rotate"></i> Refresh</button>
-                    </div>
-                </div>
-
-                <div class="card glass-panel" style="padding:0; overflow:hidden;">
-                    <div class="fm-bar" style="padding: 10px 15px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:10px;">
-                        <button class="btn-tiny" onclick="fmUp()"><i class="fa-solid fa-arrow-up"></i> Up</button>
-                        <input id="fm_path" value="/home" style="flex:1; background:transparent; border:none; color:white; font-family:monospace;" readonly>
-                    </div>
-
-                    <div class="fm-list" style="max-height: 500px; overflow-y: auto;">
-                        <table style="width:100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background: rgba(255,255,255,0.05); text-align:left;">
-                                    <th style="padding:10px;"><i class="fa-regular fa-file"></i> Name</th>
-                                    <th style="padding:10px; width:100px;">Size</th>
-                                    <th style="padding:10px; width:80px;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="fm_table_body">
-                                <tr><td colspan="3" style="padding:20px; text-align:center; color:#64748b;">Connect and click Refresh...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
             <div id="danger" class="tab">
                 <h2 style="color: var(--danger)">Danger Zone</h2>
                 <p>Destructive actions. These cannot be undone.</p>
@@ -511,10 +421,7 @@
 
         // Actions
         function connectSSH() {
-            socket.emit('connect_ssh', {
-            host: val('host'), 
-            user: val('user')
-            });
+            socket.emit('connect_ssh', {host: val('host'), user: val('user'), pass: val('pass')});
         }
 
         function runTask(name, args={}) {
@@ -538,36 +445,26 @@
 
             const fd = new FormData();
             fd.append('file', fileInput.files[0]);
+            fd.append('inst', val('r_inst'));
+            fd.append('type', 'restore');
+            // FIX: Send the checkbox state
+            fd.append('zebra', document.getElementById('r_zebra').checked);
             
-            const btn = document.querySelector('#restore .btn-warn');
+            // UI Feedback
+            const btn = document.querySelector('#restore button');
             const originalText = btn.innerText;
             btn.innerText = "⏳ UPLOADING...";
             btn.disabled = true;
 
-            // Step 1: Upload via HTTP
             fetch('/upload-db', {method: 'POST', body: fd})
             .then(r => r.json())
             .then(d => {
-                if(d.status === 'uploaded') {
-                    // Step 2: Trigger Task via Socket
-                    btn.innerText = "⏳ RESTORING...";
-                    socket.emit('start_restore', {
-                        inst: val('r_inst'),
-                        path: d.path,
-                        zebra: document.getElementById('r_zebra').checked
-                    });
-                    
-                    alert("Upload complete. Restore started in background.");
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                } else {
-                    alert("Upload failed on server.");
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                }
+                alert("Upload complete. Restore started in background.");
+                btn.innerText = originalText;
+                btn.disabled = false;
             })
             .catch(e => {
-                alert("Upload Error: " + e);
+                alert("Upload failed: " + e);
                 btn.innerText = originalText;
                 btn.disabled = false;
             });
@@ -600,24 +497,10 @@
         }
 
         //Stunnel
-        // New Listener for File Downloads (Socket-Safe)
+        // New Listener for File Downloads
         socket.on('download_ready', (d) => {
-            // Create a hidden iframe to trigger download without breaking WebSocket
-            let iframe = document.getElementById('dl-frame');
-            if (!iframe) {
-                iframe = document.createElement('iframe');
-                iframe.id = 'dl-frame';
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-            }
-            iframe.src = `/download/${d.filename}`;
-        });
-        
-        // Add a Reconnect Listener to warn you if it DOES break
-        socket.on('disconnect', () => {
-            console.log("⚠️ Socket Disconnected!");
-            const btn = document.querySelector('.conn-bar button');
-            if(btn) { btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Lost Conn'; btn.style.background = 'var(--danger)'; }
+            // Trigger browser download
+            window.location.href = `/download/${d.filename}`;
         });
 
         // Stunnel UI Logic
@@ -708,8 +591,13 @@
         // 3. Create MySQL User & Upload
         function createDBUser() {
             const fd = new FormData();
+            fd.append('type', 'db_user');
+            fd.append('dbname', val('db_name'));
+            fd.append('host', val('db_host'));
+            fd.append('dbuser', val('db_user'));
+            fd.append('dbpass', val('db_pass'));
             
-            // Optional File Check
+            // Optional File
             const f = document.getElementById('db_file');
             if(f.files.length > 0) fd.append('file', f.files[0]);
 
@@ -718,19 +606,9 @@
             btn.innerText = "⏳ PROCESSING...";
             btn.disabled = true;
 
-            // Step 1: Upload (if any file) via HTTP
             fetch('/upload-sp', {method: 'POST', body: fd})
             .then(r => r.json())
             .then(d => {
-                // Step 2: Trigger Task via Socket
-                socket.emit('start_db_user', {
-                    dbname: val('db_name'),
-                    host: val('db_host'),
-                    dbuser: val('db_user'),
-                    dbpass: val('db_pass'),
-                    sql_file: d.path // Path returned from server
-                });
-                
                 alert("Task Started. Check logs.");
                 btn.innerText = txt;
                 btn.disabled = false;
@@ -771,267 +649,7 @@
                 }
             }
         }
-
-        // --- ROBUST TERMINAL LOGIC ---
-        let term = null;
-        let fitAddon = null;
-        let termSocketListener = null; // Store listener reference to remove it later
-
-        function initTerminal() {
-            if (term) return; // Prevent double init
-            
-            // 1. UI Toggle
-            document.getElementById('btn-term-connect').style.display = 'none';
-            document.getElementById('btn-term-disconnect').style.display = 'inline-block';
-
-            // 2. Initialize xterm.js
-            term = new Terminal({
-                cursorBlink: true,
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 14,
-                theme: {
-                    background: '#0f172a',
-                    foreground: '#ffffff',
-                    cursor: '#00ff00'
-                }
-            });
-
-            // 3. Load Fit Addon
-            fitAddon = new FitAddon.FitAddon();
-            term.loadAddon(fitAddon);
-
-            // 4. Mount to DOM
-            // We clear the container first to ensure no duplicate terminals
-            const container = document.getElementById('xterm-container');
-            container.innerHTML = ''; 
-            term.open(container);
-            fitAddon.fit();
-
-            // 5. Start Backend Shell
-            // We pass dimensions so backend PTY matches frontend size
-            socket.emit('start_terminal', {cols: term.cols, rows: term.rows});
-
-            // 6. Setup Listeners
-            
-            // Input: Send keystrokes to server
-            term.onData(data => {
-                socket.emit('term_input', data);
-            });
-
-            // Output: Receive data from server
-            // We define the function separately so we can remove it later
-            termSocketListener = (d) => {
-                term.write(d.data);
-            };
-            socket.on('term_data', termSocketListener);
-
-            // Resize: Handle window changes
-            window.addEventListener('resize', fitTerm);
-            
-            term.focus();
-        }
-
-        function disconnectTerminal() {
-            if (!term) return;
-
-            // 1. Tell Backend to kill the process
-            socket.emit('disconnect_terminal');
-
-            // 2. Remove Listeners (Crucial to prevent memory leaks)
-            socket.off('term_data', termSocketListener);
-            window.removeEventListener('resize', fitTerm);
-
-            // 3. Destroy Frontend Terminal
-            term.dispose();
-            term = null;
-            fitAddon = null;
-
-            // 4. UI Toggle
-            document.getElementById('btn-term-connect').style.display = 'inline-block';
-            document.getElementById('btn-term-disconnect').style.display = 'none';
-            
-            // Optional: Show "Disconnected" message in the empty box
-            document.getElementById('xterm-container').innerHTML = 
-                '<div style="color:#64748b; padding:20px; text-align:center; padding-top:200px;">// TERMINAL DISCONNECTED</div>';
-        }
-
-        // Helper for resizing
-        function fitTerm() {
-            if (fitAddon) {
-                fitAddon.fit();
-                socket.emit('resize_term', {cols: term.cols, rows: term.rows});
-            }
-        }
-
-        // --- LIVE STATS LOGIC ---
-        let statInterval = null;
-
-        // 1. Listen for Data from Server
-        socket.on('stats_update', (d) => {
-            // Update RAM
-            document.getElementById('bar-ram').style.width = d.ram_pct + '%';
-            document.getElementById('val-ram').innerText = `${d.ram_used} / ${d.ram_total}`;
-            document.getElementById('lbl-ram').innerText = `${d.ram_pct}% Used`;
-
-            // Update Disk
-            document.getElementById('bar-disk').style.width = d.disk_pct + '%';
-            document.getElementById('val-disk').innerText = `${d.disk_used} / ${d.disk_total}`;
-            document.getElementById('lbl-disk').innerText = `${d.disk_pct}% Used`;
-
-            // Update CPU
-            document.getElementById('bar-cpu').style.width = d.cpu_pct + '%';
-            document.getElementById('val-cpu').innerText = d.cpu_text;
-        });
-
-        // 2. Start Polling Loop
-        function startLiveStats() {
-            // Run immediately
-            runTask('server_stats');
-            // Then every 3 seconds
-            if (statInterval) clearInterval(statInterval);
-            statInterval = setInterval(() => {
-                // Only poll if we are connected AND on the dashboard tab
-                const isDash = document.getElementById('dash').classList.contains('active');
-                if (isDash) {
-                    runTask('server_stats');
-                }
-            }, 3000);
-        }
-
-        // 3. Stop Polling
-        function stopLiveStats() {
-            if (statInterval) clearInterval(statInterval);
-        }
-
-        // 4. Toggle Switch Logic
-        function toggleAutoRefresh() {
-            const on = document.getElementById('auto_refresh').checked;
-            if (on) startLiveStats();
-            else stopLiveStats();
-        }
-
-        // 5. Hook into Connection Success
-        // FIND your existing socket.on('status', ...) block and modify it:
-        socket.on('status', (d) => {
-            if (d.msg === 'Connected') {
-                // START MONITORING AUTOMATICALLY ON CONNECT
-                startLiveStats(); 
-            }
-        });
-
-        // --- FILE MANAGER LOGIC ---
-        let currentPath = "/home";
-
-        // 1. Refresh / List Files
-        function refreshFM() {
-            runTask('ls', {path: currentPath});
-        }
-
-        function loadDir(path) {
-            currentPath = path;
-            document.getElementById('fm_path').value = currentPath;
-            refreshFM();
-        }
-
-        function fmUp() {
-            // Remove trailing slash if present (except for root)
-            let path = currentPath;
-            if (path.length > 1 && path.endsWith('/')) {
-                path = path.slice(0, -1);
-            }
-
-            const parts = path.split('/');
-            parts.pop(); // Remove last segment
-            
-            let newPath = parts.join('/');
-            if (newPath === "") newPath = "/"; // Fallback for root
-            
-            loadDir(newPath);
-        }
-
-        // 2. Handle Server Response (Render Table)
-        // 2. Handle Server Response (Render Table)
-        socket.on('file_list', (d) => {
-            currentPath = d.path; 
-            document.getElementById('fm_path').value = d.path;
-            
-            const tbody = document.getElementById('fm_table_body');
-            tbody.innerHTML = '';
-
-            d.files.forEach(f => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-                
-                // Icon Logic
-                let icon = f.type === 'dir' ? '<i class="fa-solid fa-folder" style="color:#f59e0b"></i>' : '<i class="fa-regular fa-file" style="color:#94a3b8"></i>';
-                
-                // --- BUTTON LOGIC ---
-                let primaryBtn = '';
-                let nameClick = '';
-                
-                if (f.type === 'dir') {
-                    // Folder: Open
-                    nameClick = `onclick="loadDir('${f.path}')" style="cursor:pointer; color: white;"`;
-                    primaryBtn = `<button class="btn-tiny" onclick="loadDir('${f.path}')">Open</button>`;
-                } else {
-                    // File: Download
-                    nameClick = `style="color: #cbd5e1;"`;
-                    // Note: We use runTask('get_file') which triggers the background download
-                    primaryBtn = `<button class="btn-tiny" onclick="runTask('get_file', {path: '${f.path}'})"><i class="fa-solid fa-download"></i></button>`;
-                }
-
-                // Delete Button (Red Trash Can)
-                // We use 'event.stopPropagation()' just in case you add row clicking later
-                let deleteBtn = `<button class="btn-tiny" style="color: #ef4444; border-color: #ef4444;" onclick="deleteFMFile('${f.path}')" title="Delete"><i class="fa-solid fa-trash"></i></button>`;
-
-                tr.innerHTML = `
-                    <td style="padding:10px;">
-                        <span ${nameClick}>${icon} &nbsp; ${f.name}</span>
-                    </td>
-                    <td style="padding:10px; font-size:0.85rem; color:#94a3b8;">${f.size}</td>
-                    <td style="padding:10px;">
-                        <div style="display:flex; gap: 8px;">
-                            ${primaryBtn}
-                            ${deleteBtn}
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        });
-
-        function deleteFMFile(path) {
-            // Confirm with user to prevent accidents
-            if(confirm(`⚠️ PERMANENTLY DELETE:\n\n${path}\n\nAre you sure? This cannot be undone.`)) {
-                runTask('rm_file', {path: path});
-            }
-        }
-
-        // 3. Upload File Logic
-        function uploadFMFile() {
-            const input = document.getElementById('fm_upload_input');
-            if (input.files.length === 0) return;
-
-            const fd = new FormData();
-            fd.append('file', input.files[0]);
-
-            // Phase 1: HTTP Upload to Local Temp
-            fetch('/upload-fm', {method: 'POST', body: fd})
-            .then(r => r.json())
-            .then(d => {
-                if(d.status === 'uploaded') {
-                    alert("Uploading to server...");
-                    // Phase 2: SCP Transfer
-                    runTask('put_file', {
-                        local_path: d.local_path,
-                        remote_path: currentPath + "/" + d.filename
-                    });
-                }
-            });
-        }
     </script>
     <script src="/static/script.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js"></script>
 </body>
 </html>

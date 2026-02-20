@@ -306,6 +306,66 @@
         }
         .CMD { color: #60a5fa; } .WARN { color: #fbbf24; } .ERROR { color: #f87171; } .SUCCESS { color: #34d399; }
 
+        /* HEADER STATS LAYOUT */
+        #header-stats {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1; /* Takes up remaining space */
+            justify-content: center;
+            margin: 0 20px;
+            background: rgba(0,0,0,0.05); /* Subtle background */
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .h-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            min-width: 140px;
+        }
+
+        .h-stat .icon {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .h-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: rgba(128,128,128,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            min-width: 50px;
+        }
+
+        .h-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 3px;
+        }
+
+        .h-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            min-width: 60px; /* Prevents jumping numbers */
+            text-align: right;
+        }
+
+        /* Toggle Switch Style */
+        .h-toggle {
+            cursor: pointer;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+        }
+        .h-toggle input { display: none; }
+        .h-toggle input:not(:checked) + i { color: var(--text-muted); opacity: 0.5; }
+
         /* --- UTILS --- */
         .tab { display: none; animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .tab.active { display: block; }

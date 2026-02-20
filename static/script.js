@@ -95,3 +95,27 @@ function toggleTheme() {
 if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark-mode');
 }
+
+// --- AUTO THEME BY TIME ---
+function initTheme() {
+    const hour = new Date().getHours();
+    // Define Day as 6:00 AM to 6:00 PM (18:00)
+    const isDay = hour >= 6 && hour < 18; 
+        
+    if (isDay) {
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
+    } else {
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+    }
+}
+
+// Run immediately on load
+initTheme();
+
+// Your existing manual toggle function (keep this so the button still works)
+function toggleTheme() {
+    document.body.classList.toggle('light-mode');
+    document.body.classList.toggle('dark-mode');
+}
